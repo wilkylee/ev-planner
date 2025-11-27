@@ -423,6 +423,7 @@
             const distance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
             const currentEnergy = (currentSoC / 100) * CAR_SPECS.batteryCapacity;
             const minEnergy = (minSoC / 100) * CAR_SPECS.batteryCapacity;
+            const energyNeededForTrip = (distance * CAR_SPECS.consumption) / 100;
 
             const stops = [];
             let remainingEnergy = currentEnergy;
@@ -431,34 +432,60 @@
 
             const goingToWork = isWorkDestination(destinationInput);
 
-            // Filter chargers
+            // Filter chargers and always include work chargers if going to work
             let chargers = availableChargers || [];
+            if (goingToWork) {
+                chargers = [...chargers, ...WORK_CHARGERS];
+            }
             if (chargerType === 'ultra') {
-                chargers = chargers.filter(c => c.power >= 150);
+                chargers = chargers.filter(c => c.power >= 150 || c.isWorkCharger);
             } else if (chargerType === 'rapid') {
                 chargers = chargers.filter(c => c.power >= 50);
             }
 
-            while (distanceCovered < distance) {
+            // Check if we actually need to charge
+            const canReachWithoutCharging = (currentEnergy - energyNeededForTrip) >= minEnergy;
+            
+            // Force at least one iteration if we need charging
+            let needsCharging = !canReachWithoutCharging;
+            let maxIterations = 10; // Safety limit
+            let iterations = 0;
+
+            while (iterations < maxIterations && distanceCovered < distance) {
+                iterations++;
                 const remainingDistance = distance - distanceCovered;
                 const energyToDestination = (remainingDistance * CAR_SPECS.consumption) / 100;
 
+                // Check if we need to charge
                 if (remainingEnergy - energyToDestination < minEnergy) {
                     let selectedCharger = null;
                     let minDist = Infinity;
 
-                    // If going to work and within 80km, force work charger
-                    if (goingToWork && remainingDistance < 80) {
-                        selectedCharger = getNearestWorkCharger(currentPos);
-                        minDist = calculateDistance(currentPos.lat, currentPos.lng, selectedCharger.lat, selectedCharger.lng);
-                    } else {
-                        // Find nearest charger along route
+                    // If going to work, prioritize work charger when close enough
+                    if (goingToWork) {
+                        const workCharger = getNearestWorkCharger(currentPos);
+                        const distToWork = calculateDistance(currentPos.lat, currentPos.lng, workCharger.lat, workCharger.lng);
+                        const energyToWork = (distToWork * CAR_SPECS.consumption) / 100;
+                        
+                        // Can we reach work charger with current battery?
+                        if (remainingEnergy - energyToWork > 5) { // Keep 5kWh buffer
+                            selectedCharger = workCharger;
+                            minDist = distToWork;
+                        }
+                    }
+
+                    // If no work charger selected, find best charger along route
+                    if (!selectedCharger) {
                         for (const charger of chargers) {
                             const distToCharger = calculateDistance(currentPos.lat, currentPos.lng, charger.lat, charger.lng);
+                            const energyToCharger = (distToCharger * CAR_SPECS.consumption) / 100;
                             const chargerToEnd = calculateDistance(charger.lat, charger.lng, end.lat, end.lng);
 
-                            // Charger should be roughly on route
-                            if (distToCharger + chargerToEnd < remainingDistance * 1.5 && distToCharger < minDist) {
+                            // Can we reach this charger? And is it roughly on route?
+                            const canReachCharger = remainingEnergy - energyToCharger > 3; // 3kWh buffer
+                            const isOnRoute = distToCharger + chargerToEnd < remainingDistance * 1.8;
+
+                            if (canReachCharger && isOnRoute && distToCharger < minDist) {
                                 minDist = distToCharger;
                                 selectedCharger = charger;
                             }
@@ -474,7 +501,7 @@
                         const targetSoC = 80;
                         const energyToAdd = ((targetSoC / 100) * CAR_SPECS.batteryCapacity) - remainingEnergy;
                         const chargingTime = (energyToAdd / Math.min(selectedCharger.power, CAR_SPECS.maxChargingPower)) * 60;
-                        const chargingCost = energyToAdd * 0.79; // ~79p/kWh average rapid charging UK
+                        const chargingCost = energyToAdd * 0.79;
 
                         stops.push({
                             charger: selectedCharger,
@@ -489,9 +516,12 @@
                         remainingEnergy = (targetSoC / 100) * CAR_SPECS.batteryCapacity;
                         currentPos = { lat: selectedCharger.lat, lng: selectedCharger.lng };
                     } else {
+                        // No charger found - this is a problem!
+                        console.warn('No suitable charger found, but charging is needed');
                         break;
                     }
                 } else {
+                    // We can reach destination with current charge
                     break;
                 }
             }
@@ -505,7 +535,8 @@
                 finalSoC: Math.max(0, finalSoC).toFixed(1),
                 totalChargingTime: stops.reduce((sum, stop) => sum + stop.chargingTime, 0),
                 totalChargingCost: stops.reduce((sum, stop) => sum + parseFloat(stop.chargingCost), 0).toFixed(2),
-                drivingTime: Math.ceil(kmToMiles(distance) / 60 * 60) // ~60mph average
+                drivingTime: Math.ceil(kmToMiles(distance) / 60 * 60), // ~60mph average
+                needsChargingButNoneFound: needsCharging && stops.length === 0
             };
         }
 
@@ -637,6 +668,8 @@
                     `;
                 });
                 html += '</div>';
+            } else if (routeData.needsChargingButNoneFound) {
+                html += '<div class="error">⚠️ WARNING: You need to charge but no suitable chargers were found along this route! You will run out of battery.</div>';
             } else {
                 html += '<div class="success">✅ No charging needed! You can reach your destination.</div>';
             }
