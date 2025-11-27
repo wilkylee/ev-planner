@@ -17,14 +17,14 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 8px;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
+            border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
         }
@@ -32,54 +32,66 @@
         .header {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
-            padding: 30px;
+            padding: 16px;
             text-align: center;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 1.6em;
+            margin-bottom: 4px;
         }
 
         .header p {
-            font-size: 1.1em;
+            font-size: 0.9em;
             opacity: 0.9;
         }
 
         .main-content {
-            display: grid;
-            grid-template-columns: 400px 1fr;
-            gap: 0;
-            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                display: grid;
+                grid-template-columns: 340px 1fr;
+                min-height: 600px;
+            }
         }
 
         .sidebar {
             background: #f8f9fa;
-            padding: 30px;
+            padding: 16px;
             border-right: 1px solid #e0e0e0;
             overflow-y: auto;
-            max-height: 700px;
+            max-height: 50vh;
+        }
+
+        @media (min-width: 768px) {
+            .sidebar {
+                max-height: 600px;
+            }
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
         .form-group label {
             display: block;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             color: #333;
-            font-size: 0.95em;
+            font-size: 0.85em;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 1em;
+            font-size: 0.95em;
             transition: border-color 0.3s;
         }
 
@@ -92,23 +104,23 @@
         .battery-display {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 20px;
-            border-radius: 12px;
+            padding: 12px;
+            border-radius: 10px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
         .battery-display h3 {
-            margin-bottom: 10px;
-            font-size: 1.1em;
+            margin-bottom: 6px;
+            font-size: 0.95em;
         }
 
         .battery-bar {
             background: rgba(255,255,255,0.3);
-            height: 30px;
-            border-radius: 15px;
+            height: 24px;
+            border-radius: 12px;
             overflow: hidden;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .battery-fill {
@@ -119,16 +131,17 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            font-size: 0.85em;
         }
 
         .btn {
             width: 100%;
-            padding: 15px;
+            padding: 12px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 1.1em;
+            font-size: 1em;
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
@@ -139,38 +152,37 @@
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .btn:active {
-            transform: translateY(0);
+        #map {
+            height: 50vh;
+            width: 100%;
         }
 
-        #map {
-            height: 700px;
-            width: 100%;
+        @media (min-width: 768px) {
+            #map {
+                height: 600px;
+            }
         }
 
         .route-info {
             background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 20px;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 12px;
             border: 2px solid #e0e0e0;
         }
 
         .route-info h3 {
             color: #1e3c72;
-            margin-bottom: 15px;
-            font-size: 1.2em;
+            margin-bottom: 10px;
+            font-size: 1em;
         }
 
         .info-row {
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
+            padding: 6px 0;
             border-bottom: 1px solid #f0f0f0;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
+            font-size: 0.9em;
         }
 
         .info-label {
@@ -184,31 +196,35 @@
         }
 
         .charging-stops {
-            margin-top: 20px;
+            margin-top: 12px;
         }
 
         .charging-stop {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .charging-stop.work-charger {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
         }
 
         .charging-stop h4 {
-            margin-bottom: 8px;
-            font-size: 1em;
+            margin-bottom: 4px;
+            font-size: 0.9em;
         }
 
         .charging-stop p {
-            font-size: 0.9em;
+            font-size: 0.8em;
             opacity: 0.95;
-            margin: 4px 0;
+            margin: 2px 0;
         }
 
         .loading {
             text-align: center;
-            padding: 20px;
+            padding: 16px;
             color: #667eea;
             font-weight: 600;
         }
@@ -216,19 +232,21 @@
         .error {
             background: #fee;
             color: #c33;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
-            margin-top: 15px;
+            margin-top: 12px;
             border: 1px solid #fcc;
+            font-size: 0.9em;
         }
 
         .success {
             background: #efe;
             color: #3c3;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
-            margin-top: 15px;
+            margin-top: 12px;
             border: 1px solid #cfc;
+            font-size: 0.9em;
         }
     </style>
 </head>
@@ -246,7 +264,7 @@
                     <div class="battery-bar">
                         <div class="battery-fill" id="batteryFill" style="width: 80%;">80%</div>
                     </div>
-                    <p>64.8 kWh Battery • ~440 km Range</p>
+                    <p>64.8 kWh • ~273 miles range</p>
                 </div>
 
                 <form id="routeForm">
@@ -257,7 +275,7 @@
 
                     <div class="form-group">
                         <label for="endLocation">🎯 Destination</label>
-                        <input type="text" id="endLocation" placeholder="e.g., London" required>
+                        <input type="text" id="endLocation" placeholder="e.g., London or LS15 8ZB" required>
                     </div>
 
                     <div class="form-group">
@@ -266,7 +284,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="minSoC">⚠️ Minimum Battery at Arrival (%)</label>
+                        <label for="minSoC">⚠️ Min Battery at Arrival (%)</label>
                         <input type="number" id="minSoC" min="0" max="100" value="15" required>
                     </div>
 
@@ -292,34 +310,29 @@
     <script>
         // BMW iX1 xDrive30 specifications
         const CAR_SPECS = {
-            batteryCapacity: 64.8, // kWh
-            consumption: 17.5, // kWh/100km average
-            maxChargingPower: 130, // kW DC fast charging
-            range: 440 // km WLTP
+            batteryCapacity: 64.8,
+            consumption: 17.5, // kWh/100km
+            maxChargingPower: 130,
+            rangeKm: 440
         };
 
-        // Initialize map centered on UK
+        // Work chargers at LS15 8ZB
+        const WORK_CHARGERS = [
+            { name: "Work Charger 1 (LS15 8ZB)", lat: 53.800255, lng: -1.42268, power: 50, type: "rapid", operator: "Workplace", isWorkCharger: true },
+            { name: "Work Charger 2 (LS15 8ZB)", lat: 53.799827, lng: -1.423213, power: 50, type: "rapid", operator: "Workplace", isWorkCharger: true }
+        ];
+
         const map = L.map('map').setView([54.5, -2.5], 6);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
         let routeLayer = null;
         let markers = [];
 
-        // Sample UK charging stations (in real app, fetch from API)
-        const chargingStations = [
-            { name: "Birmingham Rapid Charger", lat: 52.4862, lng: -1.8904, power: 150, type: "ultra" },
-            { name: "Oxford Services", lat: 51.7520, lng: -1.2577, power: 50, type: "rapid" },
-            { name: "Leicester Charging Hub", lat: 52.6369, lng: -1.1398, power: 150, type: "ultra" },
-            { name: "Coventry Fast Charge", lat: 52.4068, lng: -1.5197, power: 75, type: "rapid" },
-            { name: "Northampton Services", lat: 52.2405, lng: -0.9027, power: 150, type: "ultra" },
-            { name: "Milton Keynes Hub", lat: 52.0406, lng: -0.7594, power: 150, type: "ultra" },
-            { name: "Watford Charging Point", lat: 51.6565, lng: -0.3903, power: 50, type: "rapid" },
-            { name: "Sheffield Supercharger", lat: 53.3811, lng: -1.4701, power: 150, type: "ultra" },
-            { name: "Nottingham Rapid", lat: 52.9548, lng: -1.1581, power: 75, type: "rapid" },
-            { name: "Derby Services", lat: 52.9226, lng: -1.4746, power: 50, type: "rapid" }
-        ];
+        // Convert km to miles
+        const kmToMiles = (km) => km * 0.621371;
+        const milesToKm = (miles) => miles / 0.621371;
 
         // Update battery display
         document.getElementById('currentSoC').addEventListener('input', function(e) {
@@ -327,17 +340,10 @@
             const fill = document.getElementById('batteryFill');
             fill.style.width = soc + '%';
             fill.textContent = soc + '%';
-
-            if (soc < 20) {
-                fill.style.background = '#ef4444';
-            } else if (soc < 50) {
-                fill.style.background = '#f59e0b';
-            } else {
-                fill.style.background = '#4ade80';
-            }
+            fill.style.background = soc < 20 ? '#ef4444' : soc < 50 ? '#f59e0b' : '#4ade80';
         });
 
-        // Geocoding function (simplified - uses Nominatim)
+        // Geocoding
         async function geocode(location) {
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)},UK&limit=1`);
             const data = await response.json();
@@ -347,22 +353,74 @@
             throw new Error('Location not found');
         }
 
-        // Calculate distance between two points (Haversine formula)
+        // Fetch chargers from Open Charge Map API
+        async function fetchChargersAlongRoute(start, end, chargerType) {
+            const midLat = (start.lat + end.lat) / 2;
+            const midLng = (start.lng + end.lng) / 2;
+            const distance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
+            const searchRadius = Math.max(distance / 2, 50);
+
+            let minPower = 50;
+            if (chargerType === 'ultra') minPower = 150;
+
+            const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=${midLat}&longitude=${midLng}&distance=${searchRadius}&distanceunit=KM&maxresults=100&compact=true&verbose=false&minpowerkw=${minPower}`;
+
+            try {
+                const response = await fetch(url, {
+                    headers: { 'User-Agent': 'EVRoutePlanner/1.0' }
+                });
+                const data = await response.json();
+
+                return data.map(station => ({
+                    name: station.AddressInfo?.Title || 'Charging Station',
+                    lat: station.AddressInfo?.Latitude,
+                    lng: station.AddressInfo?.Longitude,
+                    power: station.Connections?.[0]?.PowerKW || 50,
+                    type: (station.Connections?.[0]?.PowerKW || 50) >= 150 ? 'ultra' : 'rapid',
+                    operator: station.OperatorInfo?.Title || 'Unknown',
+                    address: station.AddressInfo?.AddressLine1 || ''
+                })).filter(s => s.lat && s.lng);
+            } catch (error) {
+                console.error('Error fetching chargers:', error);
+                return [];
+            }
+        }
+
+        // Haversine distance
         function calculateDistance(lat1, lng1, lat2, lng2) {
-            const R = 6371; // Earth's radius in km
+            const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLng = (lng2 - lng1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLng/2) * Math.sin(dLng/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // Find charging stops along route
-        function findChargingStops(start, end, currentSoC, minSoC, chargerType) {
+        // Check if destination is work
+        function isWorkDestination(destination) {
+            const normalized = destination.toUpperCase().replace(/\s+/g, '');
+            return normalized.includes('LS158ZB');
+        }
+
+        // Get nearest work charger
+        function getNearestWorkCharger(currentPos) {
+            let nearest = WORK_CHARGERS[0];
+            let minDist = calculateDistance(currentPos.lat, currentPos.lng, nearest.lat, nearest.lng);
+
+            for (const charger of WORK_CHARGERS) {
+                const dist = calculateDistance(currentPos.lat, currentPos.lng, charger.lat, charger.lng);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = charger;
+                }
+            }
+            return nearest;
+        }
+
+        // Find charging stops
+        function findChargingStops(start, end, currentSoC, minSoC, chargerType, availableChargers, destinationInput) {
             const distance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
-            const energyNeeded = (distance * CAR_SPECS.consumption) / 100;
             const currentEnergy = (currentSoC / 100) * CAR_SPECS.batteryCapacity;
             const minEnergy = (minSoC / 100) * CAR_SPECS.batteryCapacity;
 
@@ -371,10 +429,14 @@
             let currentPos = { lat: start.lat, lng: start.lng };
             let distanceCovered = 0;
 
-            // Filter chargers by type
-            let availableChargers = chargingStations;
-            if (chargerType !== 'any') {
-                availableChargers = chargingStations.filter(c => c.type === chargerType);
+            const goingToWork = isWorkDestination(destinationInput);
+
+            // Filter chargers
+            let chargers = availableChargers || [];
+            if (chargerType === 'ultra') {
+                chargers = chargers.filter(c => c.power >= 150);
+            } else if (chargerType === 'rapid') {
+                chargers = chargers.filter(c => c.power >= 50);
             }
 
             while (distanceCovered < distance) {
@@ -382,41 +444,50 @@
                 const energyToDestination = (remainingDistance * CAR_SPECS.consumption) / 100;
 
                 if (remainingEnergy - energyToDestination < minEnergy) {
-                    // Need to charge - find nearest charger
-                    let nearestCharger = null;
+                    let selectedCharger = null;
                     let minDist = Infinity;
 
-                    for (const charger of availableChargers) {
-                        const distToCharger = calculateDistance(currentPos.lat, currentPos.lng, charger.lat, charger.lng);
-                        if (distToCharger < minDist && distToCharger < remainingDistance) {
-                            minDist = distToCharger;
-                            nearestCharger = charger;
+                    // If going to work and within 80km, force work charger
+                    if (goingToWork && remainingDistance < 80) {
+                        selectedCharger = getNearestWorkCharger(currentPos);
+                        minDist = calculateDistance(currentPos.lat, currentPos.lng, selectedCharger.lat, selectedCharger.lng);
+                    } else {
+                        // Find nearest charger along route
+                        for (const charger of chargers) {
+                            const distToCharger = calculateDistance(currentPos.lat, currentPos.lng, charger.lat, charger.lng);
+                            const chargerToEnd = calculateDistance(charger.lat, charger.lng, end.lat, end.lng);
+
+                            // Charger should be roughly on route
+                            if (distToCharger + chargerToEnd < remainingDistance * 1.5 && distToCharger < minDist) {
+                                minDist = distToCharger;
+                                selectedCharger = charger;
+                            }
                         }
                     }
 
-                    if (nearestCharger) {
-                        // Calculate energy used to reach charger
+                    if (selectedCharger) {
                         const energyToCharger = (minDist * CAR_SPECS.consumption) / 100;
                         remainingEnergy -= energyToCharger;
                         distanceCovered += minDist;
 
                         const arrivalSoC = (remainingEnergy / CAR_SPECS.batteryCapacity) * 100;
-
-                        // Charge to 80% (optimal for fast charging)
                         const targetSoC = 80;
                         const energyToAdd = ((targetSoC / 100) * CAR_SPECS.batteryCapacity) - remainingEnergy;
-                        const chargingTime = (energyToAdd / nearestCharger.power) * 60; // minutes
+                        const chargingTime = (energyToAdd / Math.min(selectedCharger.power, CAR_SPECS.maxChargingPower)) * 60;
+                        const chargingCost = energyToAdd * 0.79; // ~79p/kWh average rapid charging UK
 
                         stops.push({
-                            charger: nearestCharger,
-                            arrivalSoC: arrivalSoC.toFixed(1),
+                            charger: selectedCharger,
+                            arrivalSoC: Math.max(0, arrivalSoC).toFixed(1),
                             departureSoC: targetSoC,
                             chargingTime: Math.ceil(chargingTime),
-                            distanceFromStart: distanceCovered.toFixed(1)
+                            distanceFromStart: kmToMiles(distanceCovered).toFixed(1),
+                            chargingCost: chargingCost.toFixed(2),
+                            isWorkCharger: selectedCharger.isWorkCharger || false
                         });
 
                         remainingEnergy = (targetSoC / 100) * CAR_SPECS.batteryCapacity;
-                        currentPos = { lat: nearestCharger.lat, lng: nearestCharger.lng };
+                        currentPos = { lat: selectedCharger.lat, lng: selectedCharger.lng };
                     } else {
                         break;
                     }
@@ -425,79 +496,103 @@
                 }
             }
 
-            const finalSoC = ((remainingEnergy - ((distance - distanceCovered) * CAR_SPECS.consumption / 100)) / CAR_SPECS.batteryCapacity) * 100;
+            const finalEnergy = remainingEnergy - ((distance - distanceCovered) * CAR_SPECS.consumption / 100);
+            const finalSoC = (finalEnergy / CAR_SPECS.batteryCapacity) * 100;
 
             return {
-                distance: distance.toFixed(1),
+                distance: kmToMiles(distance).toFixed(1),
                 stops: stops,
-                finalSoC: finalSoC.toFixed(1),
+                finalSoC: Math.max(0, finalSoC).toFixed(1),
                 totalChargingTime: stops.reduce((sum, stop) => sum + stop.chargingTime, 0),
-                drivingTime: Math.ceil(distance / 100 * 60) // Rough estimate at 100km/h average
+                totalChargingCost: stops.reduce((sum, stop) => sum + parseFloat(stop.chargingCost), 0).toFixed(2),
+                drivingTime: Math.ceil(kmToMiles(distance) / 60 * 60) // ~60mph average
             };
         }
 
-        // Clear map markers and routes
         function clearMap() {
-            if (routeLayer) {
-                map.removeLayer(routeLayer);
-            }
-            markers.forEach(marker => map.removeLayer(marker));
+            if (routeLayer) map.removeLayer(routeLayer);
+            markers.forEach(m => map.removeLayer(m));
             markers = [];
         }
 
-        // Display route on map
-        function displayRoute(start, end, stops) {
+        // Fetch actual road route from OSRM
+        async function getRouteGeometry(waypoints) {
+            const coords = waypoints.map(p => `${p.lng},${p.lat}`).join(';');
+            try {
+                const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+                const data = await response.json();
+                if (data.routes && data.routes[0]) {
+                    return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                }
+            } catch (e) {
+                console.error('Route fetch error:', e);
+            }
+            return null;
+        }
+
+        async function displayRoute(start, end, stops) {
             clearMap();
 
-            // Add start marker
+            // Start marker
             const startMarker = L.marker([start.lat, start.lng], {
                 icon: L.divIcon({
                     className: 'custom-marker',
-                    html: '<div style="background: #4ade80; color: white; padding: 8px 12px; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">START</div>'
+                    html: '<div style="background: #4ade80; color: white; padding: 6px 10px; border-radius: 16px; font-weight: bold; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">START</div>'
                 })
             }).addTo(map);
             markers.push(startMarker);
 
-            // Add charging stop markers
+            // Charging stop markers
             stops.forEach((stop, index) => {
+                const bgColor = stop.isWorkCharger ? '#11998e' : '#f5576c';
                 const marker = L.marker([stop.charger.lat, stop.charger.lng], {
                     icon: L.divIcon({
                         className: 'custom-marker',
-                        html: `<div style="background: #f5576c; color: white; padding: 8px 12px; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">⚡ ${index + 1}</div>`
+                        html: `<div style="background: ${bgColor}; color: white; padding: 6px 10px; border-radius: 16px; font-weight: bold; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">⚡ ${index + 1}</div>`
                     })
                 }).addTo(map);
-                marker.bindPopup(`<b>${stop.charger.name}</b><br>Arrival: ${stop.arrivalSoC}%<br>Charge to: ${stop.departureSoC}%<br>Time: ${stop.chargingTime} min`);
+                marker.bindPopup(`<b>${stop.charger.name}</b><br>${stop.charger.operator}<br>Arrival: ${stop.arrivalSoC}%<br>Charge to: ${stop.departureSoC}%<br>Time: ${stop.chargingTime} min<br>Cost: £${stop.chargingCost}`);
                 markers.push(marker);
             });
 
-            // Add end marker
+            // End marker
             const endMarker = L.marker([end.lat, end.lng], {
                 icon: L.divIcon({
                     className: 'custom-marker',
-                    html: '<div style="background: #667eea; color: white; padding: 8px 12px; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">END</div>'
+                    html: '<div style="background: #667eea; color: white; padding: 6px 10px; border-radius: 16px; font-weight: bold; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">END</div>'
                 })
             }).addTo(map);
             markers.push(endMarker);
 
-            // Draw route line
-            const routePoints = [
-                [start.lat, start.lng],
-                ...stops.map(s => [s.charger.lat, s.charger.lng]),
-                [end.lat, end.lng]
+            // Build waypoints for route
+            const waypoints = [
+                { lat: start.lat, lng: start.lng },
+                ...stops.map(s => ({ lat: s.charger.lat, lng: s.charger.lng })),
+                { lat: end.lat, lng: end.lng }
             ];
 
-            routeLayer = L.polyline(routePoints, {
-                color: '#667eea',
-                weight: 4,
-                opacity: 0.7
-            }).addTo(map);
+            // Get actual road route
+            const routeCoords = await getRouteGeometry(waypoints);
 
-            // Fit map to show entire route
-            map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+            if (routeCoords) {
+                routeLayer = L.polyline(routeCoords, {
+                    color: '#667eea',
+                    weight: 4,
+                    opacity: 0.8
+                }).addTo(map);
+            } else {
+                // Fallback to straight lines
+                routeLayer = L.polyline(waypoints.map(w => [w.lat, w.lng]), {
+                    color: '#667eea',
+                    weight: 4,
+                    opacity: 0.7
+                }).addTo(map);
+            }
+
+            map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
         }
 
-        // Display route information
-        function displayRouteInfo(routeData, start, end) {
+        function displayRouteInfo(routeData) {
             const container = document.getElementById('routeInfoContainer');
 
             let html = `
@@ -505,7 +600,7 @@
                     <h3>📊 Trip Summary</h3>
                     <div class="info-row">
                         <span class="info-label">Distance:</span>
-                        <span class="info-value">${routeData.distance} km</span>
+                        <span class="info-value">${routeData.distance} miles</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Driving Time:</span>
@@ -516,8 +611,8 @@
                         <span class="info-value">${routeData.totalChargingTime} min</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Charging Stops:</span>
-                        <span class="info-value">${routeData.stops.length}</span>
+                        <span class="info-label">Charging Cost:</span>
+                        <span class="info-value">£${routeData.totalChargingCost}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Final Battery:</span>
@@ -527,26 +622,29 @@
             `;
 
             if (routeData.stops.length > 0) {
-                html += '<div class="charging-stops"><h3 style="margin-bottom: 15px; color: #1e3c72;">⚡ Charging Stops</h3>';
+                html += '<div class="charging-stops"><h3 style="margin-bottom: 10px; color: #1e3c72; font-size: 1em;">⚡ Charging Stops</h3>';
                 routeData.stops.forEach((stop, index) => {
+                    const workClass = stop.isWorkCharger ? 'work-charger' : '';
+                    const workLabel = stop.isWorkCharger ? ' 🏢 WORK' : '';
                     html += `
-                        <div class="charging-stop">
-                            <h4>Stop ${index + 1}: ${stop.charger.name}</h4>
-                            <p>📍 ${stop.distanceFromStart} km from start</p>
-                            <p>🔋 Arrival: ${stop.arrivalSoC}% → Departure: ${stop.departureSoC}%</p>
-                            <p>⚡ ${stop.charger.power}kW • ⏱️ ${stop.chargingTime} minutes</p>
+                        <div class="charging-stop ${workClass}">
+                            <h4>Stop ${index + 1}: ${stop.charger.name}${workLabel}</h4>
+                            <p>🏪 ${stop.charger.operator}</p>
+                            <p>📍 ${stop.distanceFromStart} miles from start</p>
+                            <p>🔋 ${stop.arrivalSoC}% → ${stop.departureSoC}%</p>
+                            <p>⚡ ${stop.charger.power}kW • ⏱️ ${stop.chargingTime} min • 💷 £${stop.chargingCost}</p>
                         </div>
                     `;
                 });
                 html += '</div>';
             } else {
-                html += '<div class="success">✅ No charging needed! You can reach your destination with current battery.</div>';
+                html += '<div class="success">✅ No charging needed! You can reach your destination.</div>';
             }
 
             container.innerHTML = html;
         }
 
-        // Handle form submission
+        // Form submission
         document.getElementById('routeForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -557,21 +655,27 @@
             const chargerType = document.getElementById('chargerType').value;
 
             const container = document.getElementById('routeInfoContainer');
-            container.innerHTML = '<div class="loading">🔄 Planning your route...</div>';
+            container.innerHTML = '<div class="loading">🔄 Finding locations...</div>';
 
             try {
-                // Geocode locations
                 const start = await geocode(startLocation);
                 const end = await geocode(endLocation);
 
-                // Calculate route and charging stops
-                const routeData = findChargingStops(start, end, currentSoC, minSoC, chargerType, endLocation);
+                container.innerHTML = '<div class="loading">🔌 Fetching charging stations from Open Charge Map...</div>';
 
-                // Display on map
-                displayRoute(start, end, routeData.stops);
+                const chargers = await fetchChargersAlongRoute(start, end, chargerType);
 
-                // Display route info
-                displayRouteInfo(routeData, start, end);
+                if (chargers.length === 0 && !isWorkDestination(endLocation)) {
+                    container.innerHTML = '<div class="error">❌ No charging stations found. Try a different route or charger type.</div>';
+                    return;
+                }
+
+                container.innerHTML = '<div class="loading">🗺️ Planning optimal route...</div>';
+
+                const routeData = findChargingStops(start, end, currentSoC, minSoC, chargerType, chargers, endLocation);
+
+                await displayRoute(start, end, routeData.stops);
+                displayRouteInfo(routeData);
 
             } catch (error) {
                 container.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
