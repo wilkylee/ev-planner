@@ -391,7 +391,7 @@
 
         // Fetch charging stations from Open Charge Map API
         async function fetchChargingStations(lat, lng, distance = 50) {
-            const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=$${lat}&longitude=$${lng}&distance=$${distance}&distanceunit=Miles&maxresults=100&compact=true&verbose=false&levelid=3`; // levelid=3 = DC Fast Charging
+            const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=${lat}&longitude=${lng}&distance=${distance}&distanceunit=Miles&maxresults=100&compact=true&verbose=false&levelid=3`; // levelid=3 = DC Fast Charging
             
             try {
                 const response = await fetch(url, {
@@ -498,7 +498,7 @@
 
         // Geocoding function (uses Nominatim)
         async function geocode(location) {
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=$${encodeURIComponent(location)},UK&limit=1`);
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)},UK&limit=1`);
             const data = await response.json();
             if (data.length > 0) {
                 return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), name: data[0].display_name };
@@ -654,11 +654,11 @@
                 const marker = L.marker([stop.charger.lat, stop.charger.lng], {
                     icon: L.divIcon({
                         className: 'custom-marker',
-                        html: `<div style="background: #f5576c; color: white; padding: 8px 12px; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3); white-space: nowrap;">⚡ $${index + 1}</div>`,
+                        html: `<div style="background: #f5576c; color: white; padding: 8px 12px; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3); white-space: nowrap;">⚡ ${index + 1}</div>`,
                         iconAnchor: [25, 15]
                     })
                 }).addTo(map);
-                marker.bindPopup(`<b>$${stop.charger.name}</b><br>Arrival: $${stop.arrivalSoC}%<br>Charge to: $${stop.departureSoC}%<br>Time: $${stop.chargingTime} min<br>Cost: £$${stop.cost}`);
+                marker.bindPopup(`<b>${stop.charger.name}</b><br>Arrival: ${stop.arrivalSoC}%<br>Charge to: ${stop.departureSoC}%<br>Time: ${stop.chargingTime} min<br>Cost: £${stop.cost}`);
                 markers.push(marker);
             });
 
@@ -682,27 +682,27 @@
                     <h3>📊 Trip Summary</h3>
                     <div class="info-row">
                         <span class="info-label">Distance:</span>
-                        <span class="info-value">$${routeData.distance} miles</span>
+                        <span class="info-value">${routeData.distance} miles</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Driving Time:</span>
-                        <span class="info-value">$${Math.floor(routeData.drivingTime / 60)}h $${routeData.drivingTime % 60}m</span>
+                        <span class="info-value">${Math.floor(routeData.drivingTime / 60)}h ${routeData.drivingTime % 60}m</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Charging Time:</span>
-                        <span class="info-value">$${routeData.totalChargingTime} min</span>
+                        <span class="info-value">${routeData.totalChargingTime} min</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Charging Stops:</span>
-                        <span class="info-value">$${routeData.stops.length}</span>
+                        <span class="info-value">${routeData.stops.length}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Est. Charging Cost:</span>
-                        <span class="info-value">£$${routeData.totalChargingCost}</span>
+                        <span class="info-value">£${routeData.totalChargingCost}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Final Battery:</span>
-                        <span class="info-value">$${routeData.finalSoC}%</span>
+                        <span class="info-value">${routeData.finalSoC}%</span>
                     </div>
                 </div>
             `;
@@ -712,11 +712,11 @@
                 routeData.stops.forEach((stop, index) => {
                     html += `
                         <div class="charging-stop">
-                            <h4>Stop $${index + 1}: $${stop.charger.name}</h4>
-                            <p>📍 $${stop.distanceFromStart} miles from start</p>
-                            <p>🔋 Arrival: $${stop.arrivalSoC}% → Departure: $${stop.departureSoC}%</p>
-                            <p>⚡ $${stop.charger.power}kW • ⏱️ $${stop.chargingTime} min</p>
-                            <p>💷 Est. cost: £$${stop.cost} ($${stop.energyAdded} kWh @ £$${stop.charger.pricePerKwh}/kWh)</p>
+                            <h4>Stop ${index + 1}: ${stop.charger.name}</h4>
+                            <p>📍 ${stop.distanceFromStart} miles from start</p>
+                            <p>🔋 Arrival: ${stop.arrivalSoC}% → Departure: ${stop.departureSoC}%</p>
+                            <p>⚡ ${stop.charger.power}kW • ⏱️ ${stop.chargingTime} min</p>
+                            <p>💷 Est. cost: £${stop.cost} (${stop.energyAdded} kWh @ £${stop.charger.pricePerKwh}/kWh)</p>
                         </div>
                     `;
                 });
@@ -746,8 +746,18 @@
                 const start = await geocode(startLocation);
                 const end = await geocode(endLocation);
 
+                // Fetch real charging stations from Open Charge Map API
+                container.innerHTML = '<div class="loading">🔄 Finding charging stations along your route...</div>';
+                const availableChargers = await fetchChargersAlongRoute(start, end);
+                
+                if (availableChargers.length === 0) {
+                    throw new Error('No charging stations found along this route. Please try different locations.');
+                }
+                
+                container.innerHTML = `<div class="loading">🔄 Found ${availableChargers.length} chargers. Planning optimal stops...</div>`;
+
                 // Calculate route and charging stops
-                const routeData = findChargingStops(start, end, currentSoC, minSoC, chargerType);
+                const routeData = findChargingStops(start, end, currentSoC, minSoC, chargerType, availableChargers);
 
                 // Display on map with actual road route
                 displayRoute(start, end, routeData.stops);
