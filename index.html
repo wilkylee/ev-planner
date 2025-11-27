@@ -316,10 +316,10 @@
             rangeKm: 440
         };
 
-        // Work chargers at LS15 8ZB
+        // Work chargers at LS15 8ZB - 7kW AC chargers
         const WORK_CHARGERS = [
-            { name: "Work Charger 1 (LS15 8ZB)", lat: 53.800255, lng: -1.42268, power: 50, type: "rapid", operator: "Workplace", isWorkCharger: true },
-            { name: "Work Charger 2 (LS15 8ZB)", lat: 53.799827, lng: -1.423213, power: 50, type: "rapid", operator: "Workplace", isWorkCharger: true }
+            { name: "Work Charger 1 (LS15 8ZB)", lat: 53.800255, lng: -1.42268, power: 7, type: "slow", operator: "Workplace", isWorkCharger: true },
+            { name: "Work Charger 2 (LS15 8ZB)", lat: 53.799827, lng: -1.423213, power: 7, type: "slow", operator: "Workplace", isWorkCharger: true }
         ];
 
         const map = L.map('map').setView([54.5, -2.5], 6);
@@ -510,7 +510,9 @@
                         const targetSoC = 80;
                         const energyToAdd = ((targetSoC / 100) * CAR_SPECS.batteryCapacity) - remainingEnergy;
                         const chargingTime = (energyToAdd / Math.min(selectedCharger.power, CAR_SPECS.maxChargingPower)) * 60;
-                        const chargingCost = energyToAdd * 0.79;
+                        // Different rates: work charger ~£0.15/kWh, public rapid ~£0.79/kWh
+                        const costPerKwh = selectedCharger.isWorkCharger ? 0.15 : 0.79;
+                        const chargingCost = energyToAdd * costPerKwh;
 
                         stops.push({
                             charger: selectedCharger,
