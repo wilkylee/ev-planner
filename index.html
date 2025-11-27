@@ -383,106 +383,93 @@
             throw new Error('Location not found. Try using a UK postcode.');
         }
 
-        // Fetch chargers from Open Charge Map API using JSONP (CORS-friendly)
-        function fetchWithJsonp(url) {
-            return new Promise((resolve) => {
-                const callbackName = 'ocm_callback_' + Math.random().toString(36).substr(2, 9);
-                const script = document.createElement('script');
-                
-                window[callbackName] = function(data) {
-                    resolve(data);
-                    delete window[callbackName];
-                    document.body.removeChild(script);
-                };
-                
-                script.src = url + '&callback=' + callbackName;
-                script.onerror = () => {
-                    resolve([]);
-                    delete window[callbackName];
-                    document.body.removeChild(script);
-                };
-                
-                document.body.appendChild(script);
-                
-                // Timeout after 10 seconds
-                setTimeout(() => {
-                    if (window[callbackName]) {
-                        resolve([]);
-                        delete window[callbackName];
-                    }
-                }, 10000);
-            });
-        }
-        
+        // Fetch chargers from OpenStreetMap via Overpass API (free, no auth, CORS-friendly)
         async function fetchChargersAlongRoute(start, end, chargerType) {
-            // Create search points along the route (start, 1/3, 2/3, end)
-            const searchPoints = [
-                { lat: start.lat, lng: start.lng },
-                { lat: start.lat + (end.lat - start.lat) * 0.33, lng: start.lng + (end.lng - start.lng) * 0.33 },
-                { lat: start.lat + (end.lat - start.lat) * 0.66, lng: start.lng + (end.lng - start.lng) * 0.66 },
-                { lat: end.lat, lng: end.lng }
-            ];
+            // Calculate bounding box for the route with padding
+            const minLat = Math.min(start.lat, end.lat) - 0.5;
+            const maxLat = Math.max(start.lat, end.lat) + 0.5;
+            const minLng = Math.min(start.lng, end.lng) - 0.5;
+            const maxLng = Math.max(start.lng, end.lng) + 0.5;
             
-            // Search radius per point - 50km gives good overlap
-            const searchRadius = 50;
+            // Overpass query for EV charging stations
+            const query = `
+                [out:json][timeout:25];
+                (
+                    node["amenity"="charging_station"](${minLat},${minLng},${maxLat},${maxLng});
+                );
+                out body;
+            `;
             
-            // Build power filter
-            let powerFilter = '';
-            if (chargerType === 'ultra') {
-                powerFilter = '&minpowerkw=150';
-            } else if (chargerType === 'rapid') {
-                powerFilter = '&minpowerkw=50';
-            }
-            // For 'any' - no filter
-
             try {
-                // Fetch from all points using JSONP
-                const fetchPromises = searchPoints.map(point => {
-                    const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=${point.lat}&longitude=${point.lng}&distance=${searchRadius}&distanceunit=KM&maxresults=100&compact=true&verbose=false${powerFilter}`;
-                    return fetchWithJsonp(url);
+                const response = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: 'data=' + encodeURIComponent(query),
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
                 
-                const results = await Promise.all(fetchPromises);
-                const allStations = results.flat();
+                const data = await response.json();
+                console.log(`Overpass API returned ${data.elements?.length || 0} charging stations`);
                 
-                // Deduplicate by coordinates (round to 4 decimal places)
-                const seen = new Set();
-                const uniqueStations = allStations.filter(station => {
-                    const key = `${station.AddressInfo?.Latitude?.toFixed(4)},${station.AddressInfo?.Longitude?.toFixed(4)}`;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
-
-                console.log(`Found ${uniqueStations.length} unique chargers along route`);
-                
-                // Log first few stations for debugging
-                if (uniqueStations.length > 0) {
-                    console.log('Sample stations:', uniqueStations.slice(0, 3).map(s => ({
-                        name: s.AddressInfo?.Title,
-                        lat: s.AddressInfo?.Latitude,
-                        lng: s.AddressInfo?.Longitude,
-                        power: s.Connections?.map(c => c.PowerKW)
-                    })));
-                }
-
-                return uniqueStations.map(station => {
-                    // Get the highest power connection available
-                    const maxPower = station.Connections?.reduce((max, conn) => 
-                        Math.max(max, conn.PowerKW || 0), 0) || 7;
+                // Parse OSM data into our charger format
+                const chargers = (data.elements || []).map(node => {
+                    const tags = node.tags || {};
+                    
+                    // Try to determine power from various OSM tags
+                    let power = 7; // Default to 7kW
+                    if (tags['socket:type2_combo:output']) {
+                        power = parseInt(tags['socket:type2_combo:output']) || power;
+                    } else if (tags['socket:chademo:output']) {
+                        power = parseInt(tags['socket:chademo:output']) || power;
+                    } else if (tags['charging_station:output']) {
+                        power = parseInt(tags['charging_station:output']) || power;
+                    } else if (tags.capacity) {
+                        // Rough estimate based on capacity
+                        power = parseInt(tags.capacity) > 2 ? 50 : 7;
+                    }
+                    
+                    // Check for rapid/ultra indicators in name or network
+                    const name = (tags.name || tags.operator || 'Charging Station').toLowerCase();
+                    if (name.includes('tesla') || name.includes('ionity') || name.includes('gridserve')) {
+                        power = Math.max(power, 150);
+                    } else if (name.includes('polar') || name.includes('bp pulse') || name.includes('instavolt')) {
+                        power = Math.max(power, 50);
+                    }
                     
                     return {
-                        name: station.AddressInfo?.Title || 'Charging Station',
-                        lat: station.AddressInfo?.Latitude,
-                        lng: station.AddressInfo?.Longitude,
-                        power: maxPower,
-                        type: maxPower >= 150 ? 'ultra' : maxPower >= 50 ? 'rapid' : 'fast',
-                        operator: station.OperatorInfo?.Title || 'Unknown',
-                        address: station.AddressInfo?.AddressLine1 || ''
+                        name: tags.name || tags.operator || 'EV Charging Station',
+                        lat: node.lat,
+                        lng: node.lon,
+                        power: power,
+                        type: power >= 150 ? 'ultra' : power >= 50 ? 'rapid' : 'fast',
+                        operator: tags.operator || tags.network || 'Unknown',
+                        address: tags['addr:street'] || ''
                     };
-                }).filter(s => s.lat && s.lng);
+                });
+                
+                // Filter by charger type if specified
+                let filtered = chargers;
+                if (chargerType === 'ultra') {
+                    filtered = chargers.filter(c => c.power >= 150);
+                } else if (chargerType === 'rapid') {
+                    filtered = chargers.filter(c => c.power >= 50);
+                }
+                
+                // If filtering removed all chargers, fall back to all chargers
+                if (filtered.length === 0 && chargers.length > 0) {
+                    console.log(`No ${chargerType} chargers found, using all ${chargers.length} chargers`);
+                    filtered = chargers;
+                }
+                
+                console.log(`Returning ${filtered.length} chargers after filtering for ${chargerType}`);
+                
+                // Log sample for debugging
+                if (filtered.length > 0) {
+                    console.log('Sample chargers:', filtered.slice(0, 3));
+                }
+                
+                return filtered;
             } catch (error) {
-                console.error('Error fetching chargers:', error);
+                console.error('Error fetching chargers from Overpass:', error);
                 return [];
             }
         }
