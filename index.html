@@ -353,32 +353,52 @@
             throw new Error('Location not found');
         }
 
-        // Fetch chargers from Open Charge Map API
+        // Fetch chargers from Open Charge Map API - multiple points along route for better coverage
         async function fetchChargersAlongRoute(start, end, chargerType) {
-            const midLat = (start.lat + end.lat) / 2;
-            const midLng = (start.lng + end.lng) / 2;
-            const distance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
-            // Increase search radius to cover the whole route corridor
-            const searchRadius = Math.max(distance * 0.75, 80);
-
-            // Build URL - only add minpowerkw filter for specific charger types
-            let url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=${midLat}&longitude=${midLng}&distance=${searchRadius}&distanceunit=KM&maxresults=200&compact=true&verbose=false`;
+            // Create search points along the route (start, 1/3, 2/3, end)
+            const searchPoints = [
+                { lat: start.lat, lng: start.lng },
+                { lat: start.lat + (end.lat - start.lat) * 0.33, lng: start.lng + (end.lng - start.lng) * 0.33 },
+                { lat: start.lat + (end.lat - start.lat) * 0.66, lng: start.lng + (end.lng - start.lng) * 0.66 },
+                { lat: end.lat, lng: end.lng }
+            ];
             
-            // Only filter by power if user specifically wants rapid or ultra
+            // Search radius per point - 50km gives good overlap
+            const searchRadius = 50;
+            
+            // Build power filter
+            let powerFilter = '';
             if (chargerType === 'ultra') {
-                url += '&minpowerkw=150';
+                powerFilter = '&minpowerkw=150';
             } else if (chargerType === 'rapid') {
-                url += '&minpowerkw=50';
+                powerFilter = '&minpowerkw=50';
             }
-            // For 'any' - don't add minpowerkw filter, get all chargers
+            // For 'any' - no filter
 
             try {
-                const response = await fetch(url, {
-                    headers: { 'User-Agent': 'EVRoutePlanner/1.0' }
+                // Fetch from all points in parallel
+                const fetchPromises = searchPoints.map(point => {
+                    const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=${point.lat}&longitude=${point.lng}&distance=${searchRadius}&distanceunit=KM&maxresults=100&compact=true&verbose=false${powerFilter}`;
+                    return fetch(url, { headers: { 'User-Agent': 'EVRoutePlanner/1.0' } })
+                        .then(r => r.json())
+                        .catch(() => []);
                 });
-                const data = await response.json();
+                
+                const results = await Promise.all(fetchPromises);
+                const allStations = results.flat();
+                
+                // Deduplicate by coordinates (round to 4 decimal places)
+                const seen = new Set();
+                const uniqueStations = allStations.filter(station => {
+                    const key = `${station.AddressInfo?.Latitude?.toFixed(4)},${station.AddressInfo?.Longitude?.toFixed(4)}`;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
 
-                return data.map(station => ({
+                console.log(`Found ${uniqueStations.length} unique chargers along route`);
+
+                return uniqueStations.map(station => ({
                     name: station.AddressInfo?.Title || 'Charging Station',
                     lat: station.AddressInfo?.Latitude,
                     lng: station.AddressInfo?.Longitude,
@@ -425,12 +445,40 @@
             return nearest;
         }
 
+        // Check if a point is near the route corridor (within X km of the straight line)
+        function distanceToRouteLine(point, start, end) {
+            // Calculate perpendicular distance from point to line between start and end
+            const A = point.lat - start.lat;
+            const B = point.lng - start.lng;
+            const C = end.lat - start.lat;
+            const D = end.lng - start.lng;
+
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            let param = -1;
+            if (lenSq !== 0) param = dot / lenSq;
+
+            let xx, yy;
+            if (param < 0) {
+                xx = start.lat;
+                yy = start.lng;
+            } else if (param > 1) {
+                xx = end.lat;
+                yy = end.lng;
+            } else {
+                xx = start.lat + param * C;
+                yy = start.lng + param * D;
+            }
+
+            return calculateDistance(point.lat, point.lng, xx, yy);
+        }
+
         // Find charging stops
         function findChargingStops(start, end, currentSoC, minSoC, chargerType, availableChargers, destinationInput) {
-            const distance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
+            const totalDistance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
             const currentEnergy = (currentSoC / 100) * CAR_SPECS.batteryCapacity;
             const minEnergy = (minSoC / 100) * CAR_SPECS.batteryCapacity;
-            const energyNeededForTrip = (distance * CAR_SPECS.consumption) / 100;
+            const energyNeededForTrip = (totalDistance * CAR_SPECS.consumption) / 100;
 
             const stops = [];
             let remainingEnergy = currentEnergy;
@@ -444,6 +492,14 @@
             if (goingToWork) {
                 chargers = [...chargers, ...WORK_CHARGERS];
             }
+            
+            // Pre-filter chargers to those within 30km of the route corridor
+            const corridorWidth = 30; // km
+            chargers = chargers.filter(c => {
+                const distToRoute = distanceToRouteLine({lat: c.lat, lng: c.lng}, start, end);
+                return distToRoute <= corridorWidth || c.isWorkCharger;
+            });
+            
             // Only filter by power locally if specific type requested
             if (chargerType === 'ultra') {
                 chargers = chargers.filter(c => c.power >= 150 || c.isWorkCharger);
@@ -460,15 +516,15 @@
             let maxIterations = 10; // Safety limit
             let iterations = 0;
 
-            while (iterations < maxIterations && distanceCovered < distance) {
+            while (iterations < maxIterations && distanceCovered < totalDistance) {
                 iterations++;
-                const remainingDistance = distance - distanceCovered;
+                const remainingDistance = totalDistance - distanceCovered;
                 const energyToDestination = (remainingDistance * CAR_SPECS.consumption) / 100;
 
                 // Check if we need to charge
                 if (remainingEnergy - energyToDestination < minEnergy) {
                     let selectedCharger = null;
-                    let minDist = Infinity;
+                    let bestScore = -Infinity;
 
                     // If going to work, prioritize work charger when close enough
                     if (goingToWork) {
@@ -479,32 +535,51 @@
                         // Can we reach work charger with current battery?
                         if (remainingEnergy - energyToWork > 5) { // Keep 5kWh buffer
                             selectedCharger = workCharger;
-                            minDist = distToWork;
                         }
                     }
 
                     // If no work charger selected, find best charger along route
                     if (!selectedCharger) {
                         for (const charger of chargers) {
-                            const distToCharger = calculateDistance(currentPos.lat, currentPos.lng, charger.lat, charger.lng);
-                            const energyToCharger = (distToCharger * CAR_SPECS.consumption) / 100;
-                            const chargerToEnd = calculateDistance(charger.lat, charger.lng, end.lat, end.lng);
+                            const distFromCurrent = calculateDistance(currentPos.lat, currentPos.lng, charger.lat, charger.lng);
+                            const distFromStart = calculateDistance(start.lat, start.lng, charger.lat, charger.lng);
+                            const distToEnd = calculateDistance(charger.lat, charger.lng, end.lat, end.lng);
+                            const energyToCharger = (distFromCurrent * CAR_SPECS.consumption) / 100;
 
-                            // Can we reach this charger? And is it roughly on route?
+                            // Can we reach this charger?
                             const canReachCharger = remainingEnergy - energyToCharger > 3; // 3kWh buffer
-                            const isOnRoute = distToCharger + chargerToEnd < remainingDistance * 1.8;
+                            
+                            // Is the charger ahead of us (closer to destination than we are)?
+                            const isAhead = distToEnd < remainingDistance;
+                            
+                            // Is the charger making progress toward destination?
+                            const totalDetour = distFromCurrent + distToEnd;
+                            const directRemaining = remainingDistance;
+                            const detourRatio = totalDetour / directRemaining;
+                            const isReasonableDetour = detourRatio < 1.5; // Max 50% detour
 
-                            if (canReachCharger && isOnRoute && distToCharger < minDist) {
-                                minDist = distToCharger;
-                                selectedCharger = charger;
+                            if (canReachCharger && isAhead && isReasonableDetour) {
+                                // Score: prefer chargers that are further along the route but still reachable
+                                // Higher score = better choice
+                                const progressScore = (totalDistance - distToEnd) / totalDistance; // 0-1, higher = closer to dest
+                                const powerScore = Math.min(charger.power, 150) / 150; // Prefer faster chargers
+                                const detourPenalty = (detourRatio - 1) * 0.5; // Penalize detours
+                                
+                                const score = progressScore + (powerScore * 0.3) - detourPenalty;
+                                
+                                if (score > bestScore) {
+                                    bestScore = score;
+                                    selectedCharger = charger;
+                                }
                             }
                         }
                     }
 
                     if (selectedCharger) {
-                        const energyToCharger = (minDist * CAR_SPECS.consumption) / 100;
+                        const distToCharger = calculateDistance(currentPos.lat, currentPos.lng, selectedCharger.lat, selectedCharger.lng);
+                        const energyToCharger = (distToCharger * CAR_SPECS.consumption) / 100;
                         remainingEnergy -= energyToCharger;
-                        distanceCovered += minDist;
+                        distanceCovered += distToCharger;
 
                         const arrivalSoC = (remainingEnergy / CAR_SPECS.batteryCapacity) * 100;
                         const targetSoC = 80;
