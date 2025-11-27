@@ -397,16 +397,32 @@
                 });
 
                 console.log(`Found ${uniqueStations.length} unique chargers along route`);
+                
+                // Log first few stations for debugging
+                if (uniqueStations.length > 0) {
+                    console.log('Sample stations:', uniqueStations.slice(0, 3).map(s => ({
+                        name: s.AddressInfo?.Title,
+                        lat: s.AddressInfo?.Latitude,
+                        lng: s.AddressInfo?.Longitude,
+                        power: s.Connections?.map(c => c.PowerKW)
+                    })));
+                }
 
-                return uniqueStations.map(station => ({
-                    name: station.AddressInfo?.Title || 'Charging Station',
-                    lat: station.AddressInfo?.Latitude,
-                    lng: station.AddressInfo?.Longitude,
-                    power: station.Connections?.[0]?.PowerKW || 50,
-                    type: (station.Connections?.[0]?.PowerKW || 50) >= 150 ? 'ultra' : 'rapid',
-                    operator: station.OperatorInfo?.Title || 'Unknown',
-                    address: station.AddressInfo?.AddressLine1 || ''
-                })).filter(s => s.lat && s.lng);
+                return uniqueStations.map(station => {
+                    // Get the highest power connection available
+                    const maxPower = station.Connections?.reduce((max, conn) => 
+                        Math.max(max, conn.PowerKW || 0), 0) || 7;
+                    
+                    return {
+                        name: station.AddressInfo?.Title || 'Charging Station',
+                        lat: station.AddressInfo?.Latitude,
+                        lng: station.AddressInfo?.Longitude,
+                        power: maxPower,
+                        type: maxPower >= 150 ? 'ultra' : maxPower >= 50 ? 'rapid' : 'fast',
+                        operator: station.OperatorInfo?.Title || 'Unknown',
+                        address: station.AddressInfo?.AddressLine1 || ''
+                    };
+                }).filter(s => s.lat && s.lng);
             } catch (error) {
                 console.error('Error fetching chargers:', error);
                 return [];
@@ -489,24 +505,29 @@
 
             // Filter chargers and always include work chargers if going to work
             let chargers = availableChargers || [];
+            console.log(`Starting with ${chargers.length} chargers from API`);
+            
             if (goingToWork) {
                 chargers = [...chargers, ...WORK_CHARGERS];
             }
             
-            // Pre-filter chargers to those within 30km of the route corridor
-            const corridorWidth = 30; // km
+            // Pre-filter chargers to those within 50km of the route corridor (increased from 30km)
+            const corridorWidth = 50; // km
+            const beforeCorridorFilter = chargers.length;
             chargers = chargers.filter(c => {
                 const distToRoute = distanceToRouteLine({lat: c.lat, lng: c.lng}, start, end);
                 return distToRoute <= corridorWidth || c.isWorkCharger;
             });
+            console.log(`After corridor filter (${corridorWidth}km): ${chargers.length} chargers (was ${beforeCorridorFilter})`);
             
             // Only filter by power locally if specific type requested
+            const beforePowerFilter = chargers.length;
             if (chargerType === 'ultra') {
                 chargers = chargers.filter(c => c.power >= 150 || c.isWorkCharger);
             } else if (chargerType === 'rapid') {
                 chargers = chargers.filter(c => c.power >= 50 || c.isWorkCharger);
             }
-            // For 'any' - keep all chargers, no filtering
+            console.log(`After power filter (${chargerType}): ${chargers.length} chargers (was ${beforePowerFilter})`);
 
             // Check if we actually need to charge
             const canReachWithoutCharging = (currentEnergy - energyNeededForTrip) >= minEnergy;
@@ -540,9 +561,11 @@
 
                     // If no work charger selected, find best charger along route
                     if (!selectedCharger) {
+                        console.log(`Looking for charger. Current pos: ${currentPos.lat.toFixed(3)},${currentPos.lng.toFixed(3)}, Remaining energy: ${remainingEnergy.toFixed(1)}kWh, Remaining dist: ${remainingDistance.toFixed(1)}km`);
+                        let rejectionReasons = { notReachable: 0, notAhead: 0, tooMuchDetour: 0 };
+                        
                         for (const charger of chargers) {
                             const distFromCurrent = calculateDistance(currentPos.lat, currentPos.lng, charger.lat, charger.lng);
-                            const distFromStart = calculateDistance(start.lat, start.lng, charger.lat, charger.lng);
                             const distToEnd = calculateDistance(charger.lat, charger.lng, end.lat, end.lng);
                             const energyToCharger = (distFromCurrent * CAR_SPECS.consumption) / 100;
 
@@ -554,16 +577,18 @@
                             
                             // Is the charger making progress toward destination?
                             const totalDetour = distFromCurrent + distToEnd;
-                            const directRemaining = remainingDistance;
-                            const detourRatio = totalDetour / directRemaining;
+                            const detourRatio = totalDetour / remainingDistance;
                             const isReasonableDetour = detourRatio < 1.5; // Max 50% detour
+
+                            if (!canReachCharger) rejectionReasons.notReachable++;
+                            else if (!isAhead) rejectionReasons.notAhead++;
+                            else if (!isReasonableDetour) rejectionReasons.tooMuchDetour++;
 
                             if (canReachCharger && isAhead && isReasonableDetour) {
                                 // Score: prefer chargers that are further along the route but still reachable
-                                // Higher score = better choice
-                                const progressScore = (totalDistance - distToEnd) / totalDistance; // 0-1, higher = closer to dest
-                                const powerScore = Math.min(charger.power, 150) / 150; // Prefer faster chargers
-                                const detourPenalty = (detourRatio - 1) * 0.5; // Penalize detours
+                                const progressScore = (totalDistance - distToEnd) / totalDistance;
+                                const powerScore = Math.min(charger.power, 150) / 150;
+                                const detourPenalty = (detourRatio - 1) * 0.5;
                                 
                                 const score = progressScore + (powerScore * 0.3) - detourPenalty;
                                 
@@ -573,6 +598,7 @@
                                 }
                             }
                         }
+                        console.log(`Rejection reasons - Not reachable: ${rejectionReasons.notReachable}, Not ahead: ${rejectionReasons.notAhead}, Too much detour: ${rejectionReasons.tooMuchDetour}`);
                     }
 
                     if (selectedCharger) {
@@ -612,11 +638,11 @@
                 }
             }
 
-            const finalEnergy = remainingEnergy - ((distance - distanceCovered) * CAR_SPECS.consumption / 100);
+            const finalEnergy = remainingEnergy - ((totalDistance - distanceCovered) * CAR_SPECS.consumption / 100);
             const finalSoC = (finalEnergy / CAR_SPECS.batteryCapacity) * 100;
 
             return {
-                distance: kmToMiles(distance).toFixed(1),
+                distance: kmToMiles(totalDistance).toFixed(1),
                 stops: stops,
                 finalSoC: Math.max(0, finalSoC).toFixed(1),
                 totalChargingTime: stops.reduce((sum, stop) => sum + stop.chargingTime, 0),
