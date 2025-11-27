@@ -692,7 +692,7 @@
                 finalSoC: Math.max(0, finalSoC).toFixed(1),
                 totalChargingTime: stops.reduce((sum, stop) => sum + stop.chargingTime, 0),
                 totalChargingCost: stops.reduce((sum, stop) => sum + parseFloat(stop.chargingCost), 0).toFixed(2),
-                drivingTime: Math.ceil(kmToMiles(distance) / 60 * 60), // ~60mph average
+                drivingTime: Math.ceil(kmToMiles(totalDistance) / 60 * 60), // ~60mph average
                 needsChargingButNoneFound: needsCharging && stops.length === 0
             };
         }
