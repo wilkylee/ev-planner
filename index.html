@@ -358,12 +358,19 @@
             const midLat = (start.lat + end.lat) / 2;
             const midLng = (start.lng + end.lng) / 2;
             const distance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
-            const searchRadius = Math.max(distance / 2, 50);
+            // Increase search radius to cover the whole route corridor
+            const searchRadius = Math.max(distance * 0.75, 80);
 
-            let minPower = 50;
-            if (chargerType === 'ultra') minPower = 150;
-
-            const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=${midLat}&longitude=${midLng}&distance=${searchRadius}&distanceunit=KM&maxresults=100&compact=true&verbose=false&minpowerkw=${minPower}`;
+            // Build URL - only add minpowerkw filter for specific charger types
+            let url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=${midLat}&longitude=${midLng}&distance=${searchRadius}&distanceunit=KM&maxresults=200&compact=true&verbose=false`;
+            
+            // Only filter by power if user specifically wants rapid or ultra
+            if (chargerType === 'ultra') {
+                url += '&minpowerkw=150';
+            } else if (chargerType === 'rapid') {
+                url += '&minpowerkw=50';
+            }
+            // For 'any' - don't add minpowerkw filter, get all chargers
 
             try {
                 const response = await fetch(url, {
@@ -437,11 +444,13 @@
             if (goingToWork) {
                 chargers = [...chargers, ...WORK_CHARGERS];
             }
+            // Only filter by power locally if specific type requested
             if (chargerType === 'ultra') {
                 chargers = chargers.filter(c => c.power >= 150 || c.isWorkCharger);
             } else if (chargerType === 'rapid') {
-                chargers = chargers.filter(c => c.power >= 50);
+                chargers = chargers.filter(c => c.power >= 50 || c.isWorkCharger);
             }
+            // For 'any' - keep all chargers, no filtering
 
             // Check if we actually need to charge
             const canReachWithoutCharging = (currentEnergy - energyNeededForTrip) >= minEnergy;
