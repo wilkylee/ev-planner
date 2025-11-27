@@ -776,9 +776,10 @@
             ];
 
             // Get actual road route
-            const routeCoords = await getRouteGeometry(waypoints);
+            const routeResult = await getRouteData(waypoints);
 
-            if (routeCoords) {
+            if (routeResult && routeResult.geometry) {
+                const routeCoords = routeResult.geometry;
                 routeLayer = L.polyline(routeCoords, {
                     color: '#667eea',
                     weight: 4,
