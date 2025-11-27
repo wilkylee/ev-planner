@@ -535,8 +535,10 @@
         }
 
         // Find charging stops
-        function findChargingStops(start, end, currentSoC, minSoC, chargerType, availableChargers, destinationInput) {
-            const totalDistance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
+        async function findChargingStops(start, end, currentSoC, minSoC, chargerType, availableChargers, destinationInput, roadDistanceKm) {
+            // Use road distance if provided, otherwise estimate with 1.3x multiplier
+            const totalDistance = roadDistanceKm || (calculateDistance(start.lat, start.lng, end.lat, end.lng) * 1.3);
+            console.log(`Using road distance: ${totalDistance.toFixed(1)}km (${kmToMiles(totalDistance).toFixed(1)} miles)`);
             const currentEnergy = (currentSoC / 100) * CAR_SPECS.batteryCapacity;
             const minEnergy = (minSoC / 100) * CAR_SPECS.batteryCapacity;
             const energyNeededForTrip = (totalDistance * CAR_SPECS.consumption) / 100;
@@ -703,19 +705,33 @@
             markers = [];
         }
 
-        // Fetch actual road route from OSRM
-        async function getRouteGeometry(waypoints) {
+        // Fetch actual road route and distance from OSRM
+        async function getRouteData(waypoints) {
             const coords = waypoints.map(p => `${p.lng},${p.lat}`).join(';');
             try {
                 const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
                 const data = await response.json();
                 if (data.routes && data.routes[0]) {
-                    return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    return {
+                        geometry: data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]),
+                        distanceKm: data.routes[0].distance / 1000, // Convert meters to km
+                        durationMinutes: Math.ceil(data.routes[0].duration / 60) // Convert seconds to minutes
+                    };
                 }
             } catch (e) {
                 console.error('Route fetch error:', e);
             }
             return null;
+        }
+        
+        // Get road distance between two points
+        async function getRoadDistance(from, to) {
+            const routeData = await getRouteData([from, to]);
+            if (routeData) {
+                return routeData.distanceKm;
+            }
+            // Fallback to straight-line distance with 1.3x multiplier for roads
+            return calculateDistance(from.lat, from.lng, to.lat, to.lng) * 1.3;
         }
 
         async function displayRoute(start, end, stops) {
@@ -851,7 +867,14 @@
                 const start = await geocode(startLocation);
                 const end = await geocode(endLocation);
 
-                container.innerHTML = '<div class="loading">🔌 Fetching charging stations from Open Charge Map...</div>';
+                container.innerHTML = '<div class="loading">🛣️ Calculating road distance...</div>';
+                
+                // Get actual road distance first
+                const initialRouteData = await getRouteData([start, end]);
+                const roadDistanceKm = initialRouteData ? initialRouteData.distanceKm : null;
+                console.log(`Road distance: ${roadDistanceKm ? roadDistanceKm.toFixed(1) + 'km' : 'unavailable, using estimate'}`);
+
+                container.innerHTML = '<div class="loading">🔌 Fetching charging stations...</div>';
 
                 const chargers = await fetchChargersAlongRoute(start, end, chargerType);
 
@@ -862,7 +885,7 @@
 
                 container.innerHTML = '<div class="loading">🗺️ Planning optimal route...</div>';
 
-                const routeData = findChargingStops(start, end, currentSoC, minSoC, chargerType, chargers, endLocation);
+                const routeData = await findChargingStops(start, end, currentSoC, minSoC, chargerType, chargers, endLocation, roadDistanceKm);
 
                 await displayRoute(start, end, routeData.stops);
                 displayRouteInfo(routeData);
