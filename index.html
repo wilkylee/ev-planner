@@ -383,7 +383,37 @@
             throw new Error('Location not found. Try using a UK postcode.');
         }
 
-        // Fetch chargers from Open Charge Map API - multiple points along route for better coverage
+        // Fetch chargers from Open Charge Map API using JSONP (CORS-friendly)
+        function fetchWithJsonp(url) {
+            return new Promise((resolve) => {
+                const callbackName = 'ocm_callback_' + Math.random().toString(36).substr(2, 9);
+                const script = document.createElement('script');
+                
+                window[callbackName] = function(data) {
+                    resolve(data);
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                };
+                
+                script.src = url + '&callback=' + callbackName;
+                script.onerror = () => {
+                    resolve([]);
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                };
+                
+                document.body.appendChild(script);
+                
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    if (window[callbackName]) {
+                        resolve([]);
+                        delete window[callbackName];
+                    }
+                }, 10000);
+            });
+        }
+        
         async function fetchChargersAlongRoute(start, end, chargerType) {
             // Create search points along the route (start, 1/3, 2/3, end)
             const searchPoints = [
@@ -406,12 +436,10 @@
             // For 'any' - no filter
 
             try {
-                // Fetch from all points in parallel
+                // Fetch from all points using JSONP
                 const fetchPromises = searchPoints.map(point => {
                     const url = `https://api.openchargemap.io/v3/poi/?output=json&countrycode=GB&latitude=${point.lat}&longitude=${point.lng}&distance=${searchRadius}&distanceunit=KM&maxresults=100&compact=true&verbose=false${powerFilter}`;
-                    return fetch(url, { headers: { 'User-Agent': 'EVRoutePlanner/1.0' } })
-                        .then(r => r.json())
-                        .catch(() => []);
+                    return fetchWithJsonp(url);
                 });
                 
                 const results = await Promise.all(fetchPromises);
